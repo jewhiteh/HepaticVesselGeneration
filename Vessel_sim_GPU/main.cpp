@@ -6,8 +6,8 @@ Summary: This code exists to create hepatic phantom data
 #include "phantom.h"
 #include "kernel.cuh"
 
-#define constant_seed 0//turn on to make a constant PRNG seed phantom
-#define Intersection_check 1//turn on to assure no intersecting vessel branches in the centerline tree
+#define constant_seed 1//turn on to make a constant PRNG seed phantom
+#define Intersection_check 0//turn on to assure no intersecting vessel branches in the centerline tree
 #define GPU 1//turn on for hardware accelerated processesing
 
 using namespace std;
@@ -73,7 +73,8 @@ int main() {
 		float initialResoltion = 1.54f;//initial resoluion in [mm]
 		float scale = 1.3f + 1.0f * (mt() / (double)mt.max());//what to scale the final radius by [4,7]mm is what is set
 		scale *= initialResoltion / phantom_res;//scale radius by resolution change 
-		int check = tree.build_tree(Nx, Ny, Nz, endpoints, i, scale, seed);//generate vasculature
+		float outResolutionScaleFactor = phantom_res / desiredRes;
+		int check = tree.build_tree(Nx, Ny, Nz, endpoints, i, scale, seed, outResolutionScaleFactor);//generate vasculature
 
 
 		//check if we got stuck building the tree
@@ -81,7 +82,7 @@ int main() {
 			//try again until we do not get stuck
 			while (check != 0) {
 				cerr << "We got stuck somewhere creating that tree...trying again" << endl;
-				check = tree.build_tree(Nx, Ny, Nz, endpoints, i, scale, seed);
+				check = tree.build_tree(Nx, Ny, Nz, endpoints, i, scale, seed, outResolutionScaleFactor);
 			}
 		}
 	}
@@ -733,8 +734,10 @@ Random Hepatic Tree Generation within Blood Demand Map
 // terminal_pts: number of terminal points for tree
 // scale: what to scale the resolution by
 // seed: PSRNG seed
+//	outResolutionScaleFactor: factor to scale the input resolution by
 */
-int  Liver::build_tree(const int Nx, const int Ny, const int Nz, int terminal_pts, int tree_number, float scale, unsigned int seed) {
+int  Liver::build_tree(const int Nx, const int Ny, const int Nz, int terminal_pts, int tree_number,
+	float scale, unsigned int seed, float outResolutionScaleFactor) {
 
 	//set PRNG
 	mt19937 mt;
@@ -950,7 +953,7 @@ int  Liver::build_tree(const int Nx, const int Ny, const int Nz, int terminal_pt
 	*/
 	vector <xyz> *interpBranches = new vector <xyz>[count];//holds x,y,z points for all interpolated branches
 	optimizeAngles(xstart, ystart, zstart, xstop, ystop, zstop, root,
-		Qs, &count, gamma, scale, children, r, prePushCount, interpBranches);
+		Qs, &count, gamma, scale, children, r, prePushCount, interpBranches, outResolutionScaleFactor);
 
 
 	/*
@@ -2068,10 +2071,11 @@ int Liver::getBestCostIndx( float all_costs[], int count) {
 //	children: array of the children for each branch
 //	r: radius of each branch
 //	prePushCount: number of branches prior to being pushed
+//	outResolutionScaleFactor: factor to scale the input resolution by
 //	
 // Output: interpBranches, tree with branches pushed to not cause intersection
 void Liver::optimizeAngles(float xstart[], float ystart[], float zstart[], float xstop[], float ystop[], float zstop[], int root[],
-	int Qs[], int *count, float gamma, float scale, int children[], float r[], int prePushCount, vector <xyz> *interpBranches) {
+	int Qs[], int *count, float gamma, float scale, int children[], float r[], int prePushCount, vector <xyz> *interpBranches, float outResolutionScaleFactor) {
 
 	//Initialize Arrays
 	float *angles = new float[*count];//array to hold the ideal angle (Murrays law) for each bifurcation
@@ -2226,10 +2230,10 @@ void Liver::optimizeAngles(float xstart[], float ystart[], float zstart[], float
 		//check if there are control points
 		if (linearPointX[i] != -1 || i == 0) {
 			polyInterp(xstart[i], ystart[i], zstart[i], xstop[i], ystop[i], zstop[i], startSlopeX[i],
-				startSlopeY[i], startSlopeZ[i], endSlopeX[i], endSlopeY[i], endSlopeZ[i], linearPointX[i], linearPointY[i], linearPointZ[i], interpBranches, i);
+				startSlopeY[i], startSlopeZ[i], endSlopeX[i], endSlopeY[i], endSlopeZ[i], linearPointX[i], linearPointY[i], linearPointZ[i], interpBranches, i, outResolutionScaleFactor);
 		}
 		else {//this branch has control points
-			polyInterpWithControlPoints(controlPts[i], interpBranches, i);
+			polyInterpWithControlPoints(controlPts[i], interpBranches, i, outResolutionScaleFactor);
 		}
 	}
 
@@ -2246,15 +2250,16 @@ void Liver::optimizeAngles(float xstart[], float ystart[], float zstart[], float
 //linearPointX,Y,Z: x,y,z for which a linear fit is used till 
 //interpBranches: vector to hold interpolation points
 //kk: index of branch in the tree object
+//	outResolutionScaleFactor: factor to scale the input resolution by
 void Liver::polyInterp(float xstart, float ystart, float zstart, float xstop, float ystop, float zstop, float startSlopeX,
 	float startSlopeY, float startSlopeZ, float endSlopeX, float endSlopeY, float endSlopeZ, float linearPointX,
-	float linearPointY, float linearPointZ, vector <xyz> *interpBranches, int k) {
+	float linearPointY, float linearPointZ, vector <xyz> *interpBranches, int k, float outResolutionScaleFactor) {
 
 	interpBranches[k].push_back({ xstart, ystart, zstart });
 	//Initial linear interpolation 
 	if (k != 0) {
 		//get initial length of each segment
-		int lengthLin = ceil(1.5f * pow(pow(linearPointX - xstart, 2.0f) + pow(linearPointY - ystart, 2.0f) + pow(linearPointZ - zstart, 2.0f), 0.5f));
+		int lengthLin = ceil(outResolutionScaleFactor * 1.5f * pow(pow(linearPointX - xstart, 2.0f) + pow(linearPointY - ystart, 2.0f) + pow(linearPointZ - zstart, 2.0f), 0.5f));
 		if (lengthLin < 5) { lengthLin = 5; }
 
 		float x, y, z;
@@ -2274,7 +2279,7 @@ void Liver::polyInterp(float xstart, float ystart, float zstart, float xstop, fl
 	}
 
 	//Polynomial interp
-	int lengthPoly = ceil(1.5f * pow(pow(xstop - linearPointX, 2.0f) + pow(ystop - linearPointY, 2.0f) + pow(zstop - linearPointZ, 2.0f), 0.5f));
+	int lengthPoly = ceil(outResolutionScaleFactor * 1.5f * pow(pow(xstop - linearPointX, 2.0f) + pow(ystop - linearPointY, 2.0f) + pow(zstop - linearPointZ, 2.0f), 0.5f));
 	if (lengthPoly < 5) { lengthPoly = 5; }
 
 
@@ -2305,7 +2310,8 @@ void Liver::polyInterp(float xstart, float ystart, float zstart, float xstop, fl
 //controlPts: points for the spline to go through
 //interpBranches: vector to hold interpolation points
 //kk: index of branch in the tree object
-void Liver::polyInterpWithControlPoints(vector <xyz> controlPts, vector <xyz> *interpBranches, int kk) {
+//	outResolutionScaleFactor: factor to scale the input resolution by
+void Liver::polyInterpWithControlPoints(vector <xyz> controlPts, vector <xyz> *interpBranches, int kk, float outResolutionScaleFactor) {
 
 	//Initialize
 	int k = 4;//order
@@ -2359,7 +2365,7 @@ void Liver::polyInterpWithControlPoints(vector <xyz> controlPts, vector <xyz> *i
 	//loop through each segment
 	interpBranches[kk].push_back({ controlPts.at(0).x, controlPts.at(0).y, controlPts.at(0).z });
 	for (int i = 0; i < n - 1; i++) {
-		l = ceil(pow(pow(yi(i + 1, 0) - yi(i, 0), 2.0f) + pow(yi(i + 1, 1) - yi(i, 1), 2.0f) + pow(yi(i + 1, 2) - yi(i, 2), 2.0f), 0.5f));
+		l = ceil(outResolutionScaleFactor * pow(pow(yi(i + 1, 0) - yi(i, 0), 2.0f) + pow(yi(i + 1, 1) - yi(i, 1), 2.0f) + pow(yi(i + 1, 2) - yi(i, 2), 2.0f), 0.5f));
 		if (l < 5) { l = 5; }
 		int index = 0 + 3 * i;
 		//loop through query points
