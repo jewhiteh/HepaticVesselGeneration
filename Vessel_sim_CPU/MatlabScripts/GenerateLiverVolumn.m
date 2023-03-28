@@ -17,6 +17,16 @@ function ph = GenerateLiverVolumn(seg, InputRes)
 %	Email:     joewhitehead1000@gmail.com
 %	Created:  2023-03-23
 % __________________________________________________________________________
+if ~isa(seg,'logical')
+    error('Please input a logical for the segmentation,');
+end
+if size(seg,3) == 1
+    error('Expected a 3D input for the segmentation.');
+end
+if length(InputRes) ~= 3
+    error('Please input resolution as a 3-element array.');
+end
+
 
 %Get folder to save Phantom
 path = cd;
@@ -59,7 +69,8 @@ map = imwarp(map,Rmoving, tform_trans,'OutputView',Rmoving);
 %Affine registration
 waitbar(0, f, sprintf('Affine registration (this may take a few minutes)...'));
 [optimizer, metric] = imregconfig('monomodal');
-tform = imregtform(uint8(map>0),Rmoving,uint8(seg>0),Rfixed,'affine',optimizer,metric,'DisplayOptimization',1);
+optimizer.MaximumIterations = 10;
+tform = imregtform(uint8(map>0),Rmoving,uint8(seg>0),Rfixed,'affine',optimizer,metric,'DisplayOptimization',true);
 movingRegisteredVolume = imwarp(map,Rmoving, tform,'OutputView',Rfixed);
 disp(['Dice after affine registration:' num2str(dice(seg>0,movingRegisteredVolume>0))]);
 
@@ -78,7 +89,7 @@ for i = 1:10
 end
 waitbar(i/10, f, sprintf('Saving...'));
 %Save Phantom
-savePhantom(fullfile(path,'PhantomCustom.dat'),uint8(ph),'unit8');
+savePhantom(fullfile(path,'PhantomCustom.dat'),uint8(ph),'uint8');
 disp(['Succesfully created a liver blood demand map and saved it as ' num2str(fullfile(path,'PhantomCustom.dat'))]);
 disp('Saved at a resolution of [0.77, 0.77, 0.77] mm');
 end
