@@ -6,8 +6,8 @@ Summary: This code exists to create hepatic phantom data
 #include "phantom.h"
 #include "kernel.cuh"
 
-#define constant_seed 1//turn on to make a constant PRNG seed phantom
-#define Intersection_check 0//turn on to assure no intersecting vessel branches in the centerline tree
+#define constant_seed 0//turn on to make a constant PRNG seed phantom
+#define Intersection_check 1//turn on to assure no intersecting vessel branches in the centerline tree
 #define GPU 1//turn on for hardware accelerated processesing
 
 using namespace std;
