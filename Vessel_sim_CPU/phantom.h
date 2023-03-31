@@ -15,8 +15,8 @@ using namespace std;
 #include <fstream>
 #include <device_launch_parameters.h>
 #include <random>
-#include <eigen-3.3.8/Eigen/Dense>
-#include <eigen-3.3.8/Eigen/Core>
+#include <eigen-3.4.0/Eigen/Dense>
+#include <eigen-3.4.0/Eigen/Core>
 
 
 /**
