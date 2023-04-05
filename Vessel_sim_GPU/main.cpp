@@ -49,6 +49,9 @@ int main() {
 	int t = time(NULL);
 	mt19937 mt;
 	mt.seed(t);
+	
+	//create required directory
+	_mkdir("../Vessel_sim_GPU/CLines");
 
 	// Build requested number of trees
 	for (int i = 1; i <= tree_number; i++) {
