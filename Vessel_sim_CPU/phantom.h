@@ -14,6 +14,7 @@ using namespace std;
 #include <chrono>
 #include <fstream>
 #include <random>
+#include <direct.h>
 #include <eigen-3.4.0/Eigen/Dense>
 #include <eigen-3.4.0/Eigen/Core>
 
