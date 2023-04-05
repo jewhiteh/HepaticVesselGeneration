@@ -16,6 +16,7 @@ using namespace std;
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <random>
+#include <direct.h>
 #include <eigen-3.4.0/Eigen/Dense>
 #include <eigen-3.4.0/Eigen/Dense>
 
