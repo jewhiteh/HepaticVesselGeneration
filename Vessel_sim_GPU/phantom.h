@@ -27,7 +27,7 @@ using namespace std;
 class Liver {
 public:
 	//main function to build the hepatic tree
-	int build_tree(const int Nx, const int Ny, const int Nz, int terminal_pts, int tree_number, float scale, unsigned int seed);//builds vessel tree
+	int build_tree(const int Nx, const int Ny, const int Nz, int terminal_pts, int tree_number, float scale, unsigned int seed, float outResolutionScaleFactor);//builds vessel tree
 	
 private:
 	//way to store  x,y,z points in a vector
