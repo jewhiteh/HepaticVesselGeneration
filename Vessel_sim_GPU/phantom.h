@@ -71,14 +71,14 @@ private:
 	void polyInterp(float xstart, float ystart, float zstart, float xstop, float ystop, float zstop, float startSlopeX,
 		float startSlopeY, float startSlopeZ, float endSlopeX, float endSlopeY, float endSlopeZ, float linearPointX,
 		float linearPointY, float linearPointZ,
-		vector <xyz> *interpBranches, int i);
+		vector <xyz> *interpBranches, int i), float outResolutionScaleFactor;
 	
 	//function to perform polynomial interpolation of branches that were broken into multiple segments
-	void polyInterpWithControlPoints(vector <xyz> controlPts, vector <xyz> *interpBranches, int i);
+	void polyInterpWithControlPoints(vector <xyz> controlPts, vector <xyz> *interpBranches, int i, float outResolutionScaleFactor);
 	
 	//function to optimize the bifurcation angles durring polynomial interpolation
 	void optimizeAngles(float xstart[], float ystart[], float zstart[], float xstop[], float ystop[], float zstop[], int root[],
-		int Qs[], int *count, float gamma, float scale, int children[], float r[], int prePushCount, vector <xyz> *interpBranches);
+		int Qs[], int *count, float gamma, float scale, int children[], float r[], int prePushCount, vector <xyz> *interpBranches,  float outResolutionScaleFactor);
 
 	//function to get the linear index of a a 4D array (Column Major Order)
 	static void getLinearInd(unsigned int y, unsigned int x, unsigned int z, unsigned int l, unsigned int dims[4], int *index);
